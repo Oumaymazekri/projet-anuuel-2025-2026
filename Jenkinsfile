@@ -5,13 +5,9 @@ pipeline {
         // Docker
         DOCKER_BUILDKIT = '1'
 
-        // SonarQube
+        // SonarQube (sans token ici)
         SONAR_PROJECT_KEY = 'microservices-project'
         SONAR_HOST_URL = 'http://localhost:9000'
-
-        // Credentials Jenkins
-        SONAR_TOKEN = credentials('sonartoken')
-        SLACK_URL = credentials('slack-webhook')
 
         // Docker Compose
         COMPOSE_FILE = 'docker-compose.yml'
@@ -33,7 +29,7 @@ pipeline {
             }
         }
 
-        /* ================= BUILD IMAGES ================= */
+        /* ================= BUILD ================= */
         stage('Build Docker Images') {
             steps {
                 echo "🐳 Build des images Docker..."
@@ -44,18 +40,18 @@ pipeline {
         }
 
         /* ================= INTEGRATION TESTS ================= */
-        stage('Integration Tests (Docker Compose)') {
+        stage('Integration Tests') {
             steps {
-                echo "🧪 Lancement des tests d’intégration..."
+                echo "🧪 Tests d’intégration via Docker Compose..."
                 sh '''
                   docker compose up -d
                   echo "⏳ Attente du démarrage des services..."
                   sleep 30
 
-                  echo "🔍 Vérification des conteneurs..."
+                  echo "📦 Conteneurs actifs"
                   docker ps
 
-                  echo "🧪 Tests d’intégration basiques (health check)"
+                  echo "🔍 Health checks"
                   curl -f http://localhost || exit 1
                   curl -f http://localhost/auth || exit 1
                   curl -f http://localhost/products || exit 1
@@ -66,21 +62,21 @@ pipeline {
 
         /* ================= SONARQUBE ================= */
         stage('SonarQube Analysis') {
-    steps {
-        withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-            sh '''
-              npx sonar-scanner \
-              -Dsonar.projectKey=microservices-project \
-              -Dsonar.sources=. \
-              -Dsonar.host.url=http://localhost:9000 \
-              -Dsonar.login=$SONAR_TOKEN
-            '''
+            steps {
+                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                    sh '''
+                      npx sonar-scanner \
+                      -Dsonar.projectKey=$SONAR_PROJECT_KEY \
+                      -Dsonar.sources=. \
+                      -Dsonar.host.url=$SONAR_HOST_URL \
+                      -Dsonar.login=$SONAR_TOKEN
+                    '''
+                }
+            }
         }
-    }
-}
 
         /* ================= DEPLOY ================= */
-        stage('Deploy (Docker)') {
+        stage('Deploy') {
             steps {
                 echo "🚀 Déploiement final..."
                 sh '''
@@ -93,7 +89,7 @@ pipeline {
 
     post {
         success {
-            echo "✅ Pipeline terminé avec succès"
+            echo "✅ Pipeline CI/CD réussi"
             withCredentials([string(credentialsId: 'slack-webhook', variable: 'SLACK_URL')]) {
                 sh '''
                   curl -X POST -H "Content-type: application/json" \
@@ -104,7 +100,7 @@ pipeline {
         }
 
         failure {
-            echo "❌ Pipeline échoué"
+            echo "❌ Pipeline CI/CD échoué"
             withCredentials([string(credentialsId: 'slack-webhook', variable: 'SLACK_URL')]) {
                 sh '''
                   curl -X POST -H "Content-type: application/json" \
