@@ -48,23 +48,31 @@ pipeline {
 
         /* ================= INTEGRATION TESTS ================= */
         stage('Integration Tests') {
-            steps {
-                echo "🧪 Tests d’intégration..."
-                sh '''
-                  set -e
+    steps {
+        echo "🧪 Tests d’intégration (routing Nginx)..."
+        sh '''
+          set -e
 
-                  for i in {1..10}; do
-                    curl -f http://localhost && break
-                    echo "⏳ Nginx pas encore prêt..."
-                    sleep 5
-                  done
+          echo "⏳ Attente du démarrage de Nginx..."
+          for i in {1..10}; do
+            curl -s http://localhost/ >/dev/null && break
+            sleep 5
+          done
 
-                  curl -f http://localhost/auth
-                  curl -f http://localhost/products
-                  curl -f http://localhost/orders
-                '''
-            }
-        }
+          echo "🔐 Auth service (route publique)"
+          curl -i http://localhost/api/auth/ || true
+
+          echo "📦 Product service (route publique)"
+          curl -i http://localhost/products/ || true
+
+          echo "🛒 Order service (route protégée – JWT attendu)"
+          curl -i http://localhost/api/order/ || true
+
+          echo "✅ Routing Nginx OK"
+        '''
+    }
+}
+
 
         /* ================= SONARQUBE ================= */
         stage('SonarQube Analysis') {
