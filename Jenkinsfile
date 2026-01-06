@@ -66,19 +66,18 @@ pipeline {
 
         /* ================= SONARQUBE ================= */
         stage('SonarQube Analysis') {
-            steps {
-                echo "📊 Analyse SonarQube..."
-                withSonarQubeEnv('SonarQube') {
-                    sh '''
-                      sonar-scanner \
-                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                        -Dsonar.sources=. \
-                        -Dsonar.host.url=${SONAR_HOST_URL} \
-                        -Dsonar.login=${SONAR_TOKEN}
-                    '''
-                }
-            }
+    steps {
+        withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+            sh '''
+              npx sonar-scanner \
+              -Dsonar.projectKey=microservices-project \
+              -Dsonar.sources=. \
+              -Dsonar.host.url=http://localhost:9000 \
+              -Dsonar.login=$SONAR_TOKEN
+            '''
         }
+    }
+}
 
         /* ================= DEPLOY ================= */
         stage('Deploy (Docker)') {
