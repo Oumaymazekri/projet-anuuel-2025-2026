@@ -3,10 +3,6 @@ pipeline {
 
     environment {
         DOCKER_BUILDKIT = '1'
-
-        SONAR_PROJECT_KEY = 'microservices-project'
-        SONAR_HOST_URL = 'http://localhost:9000'
-
         COMPOSE_FILE = 'docker-compose.yml'
     }
 
@@ -34,13 +30,22 @@ pipeline {
             }
         }
 
-        /* ================= START STACK ================= */
+        /* ================= START STACK (CLEAN + START) ================= */
         stage('Start Services') {
             steps {
-                echo "🚀 Démarrage des services..."
+                echo "🧹 Nettoyage Docker + Démarrage des services..."
                 sh '''
+                  # Nettoyage COMPLET de l’ancien environnement
+                  docker compose down -v --remove-orphans || true
+
+                  docker rm -f product-service auth-service order-service frontend nginx-gateway || true
+
+                  docker network prune -f || true
+
+                  # Démarrage des NOUVEAUX conteneurs
                   docker compose up -d
-                  echo "⏳ Attente des services..."
+
+                  echo "⏳ Attente du démarrage des services..."
                   sleep 40
                 '''
             }
@@ -48,53 +53,48 @@ pipeline {
 
         /* ================= INTEGRATION TESTS ================= */
         stage('Integration Tests') {
-    steps {
-        echo "🧪 Tests d’intégration (routing Nginx)..."
-        sh '''
-          set -e
+            steps {
+                echo "🧪 Tests d’intégration (routing Nginx)..."
+                sh '''
+                  set -e
 
-          echo "⏳ Attente du démarrage de Nginx..."
-          for i in {1..10}; do
-            curl -s http://localhost/ >/dev/null && break
-            sleep 5
-          done
+                  echo "⏳ Attente du démarrage de Nginx..."
+                  for i in {1..10}; do
+                    curl -s http://localhost/ >/dev/null && break
+                    sleep 5
+                  done
 
-          echo "🔐 Auth service (route publique)"
-          curl -i http://localhost/api/auth/ || true
+                  echo "🔐 Auth service (route publique)"
+                  curl -i http://localhost/api/auth/ || true
 
-          echo "📦 Product service (route publique)"
-          curl -i http://localhost/products/ || true
+                  echo "📦 Product service (route publique)"
+                  curl -i http://localhost/products/ || true
 
-          echo "🛒 Order service (route protégée – JWT attendu)"
-          curl -i http://localhost/api/order/ || true
+                  echo "🛒 Order service (route protégée – JWT attendu)"
+                  curl -i http://localhost/api/order/ || true
 
-          echo "✅ Routing Nginx OK"
-        '''
-    }
-}
-
-
-        /* ================= SONARQUBE ================= */
-      stage('SonarQube Analysis') {
-    steps {
-        script {
-            // Récupération du chemin du scanner via Jenkins
-            def scannerHome = tool 'SonarScanner'
-
-            withSonarQubeEnv('SonarQube') {
-                sh """
-                  export PATH=\$PATH:${scannerHome}/bin
-                  sonar-scanner \
-                    -Dsonar.projectKey=microservices-project \
-                    -Dsonar.sources=Front-main,auth-service-main,order-service-main,product-service-main \
-                    -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**,**/vendor/**
-                """
+                  echo "✅ Routing Nginx OK"
+                '''
             }
         }
-    }
-}
 
-
+        /* ================= SONARQUBE ================= */
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    def scannerHome = tool 'SonarScanner'
+                    withSonarQubeEnv('SonarQube') {
+                        sh """
+                          export PATH=\$PATH:${scannerHome}/bin
+                          sonar-scanner \
+                            -Dsonar.projectKey=microservices-project \
+                            -Dsonar.sources=Front-main,auth-service-main,order-service-main,product-service-main \
+                            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**,**/vendor/**
+                        """
+                    }
+                }
+            }
+        }
 
         /* ================= DEPLOY ================= */
         stage('Deploy') {
@@ -109,31 +109,17 @@ pipeline {
     }
 
     post {
+        always {
+            echo "🧹 Nettoyage Docker final..."
+            sh 'docker compose down -v --remove-orphans || true'
+        }
+
         success {
             echo "✅ Pipeline CI/CD réussi"
-            withCredentials([string(credentialsId: 'slack-webhook', variable: 'SLACK_URL')]) {
-                sh '''
-                  curl -X POST -H "Content-type: application/json" \
-                  --data '{"text":"✅ Pipeline CI/CD Microservices réussi"}' \
-                  $SLACK_URL
-                '''
-            }
         }
 
         failure {
             echo "❌ Pipeline CI/CD échoué"
-            withCredentials([string(credentialsId: 'slack-webhook', variable: 'SLACK_URL')]) {
-                sh '''
-                  curl -X POST -H "Content-type: application/json" \
-                  --data '{"text":"❌ Pipeline CI/CD Microservices échoué"}' \
-                  $SLACK_URL
-                '''
-            }
-        }
-
-        always {
-            echo "🧹 Nettoyage Docker..."
-            sh 'docker compose down || true'
         }
     }
 }
