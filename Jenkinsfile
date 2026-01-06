@@ -35,16 +35,11 @@ pipeline {
             steps {
                 echo "🧹 Nettoyage Docker + Démarrage des services..."
                 sh '''
-                  # Nettoyage COMPLET de l’ancien environnement
                   docker compose down -v --remove-orphans || true
-
                   docker rm -f product-service auth-service order-service frontend nginx-gateway || true
-
                   docker network prune -f || true
 
-                  # Démarrage des NOUVEAUX conteneurs
                   docker compose up -d
-
                   echo "⏳ Attente du démarrage des services..."
                   sleep 40
                 '''
@@ -58,19 +53,13 @@ pipeline {
                 sh '''
                   set -e
 
-                  echo "⏳ Attente du démarrage de Nginx..."
                   for i in {1..10}; do
                     curl -s http://localhost/ >/dev/null && break
                     sleep 5
                   done
 
-                  echo "🔐 Auth service (route publique)"
                   curl -i http://localhost/api/auth/ || true
-
-                  echo "📦 Product service (route publique)"
                   curl -i http://localhost/products/ || true
-
-                  echo "🛒 Order service (route protégée – JWT attendu)"
                   curl -i http://localhost/api/order/ || true
 
                   echo "✅ Routing Nginx OK"
@@ -79,19 +68,18 @@ pipeline {
         }
 
         /* ================= SONARQUBE ================= */
-       stage('SonarQube Analysis') {
-    steps {
-        withSonarQubeEnv('SonarQube') {
-            sh '''
-              /var/lib/jenkins/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarScanner/bin/sonar-scanner \
-                -Dsonar.projectKey=microservices-project \
-                -Dsonar.sources=Front-main,auth-service-main,order-service-main,product-service-main \
-                -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**,**/vendor/**
-            '''
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh '''
+                      /var/lib/jenkins/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarScanner/bin/sonar-scanner \
+                        -Dsonar.projectKey=microservices-project \
+                        -Dsonar.sources=Front-main,auth-service-main,order-service-main,product-service-main \
+                        -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**,**/vendor/**
+                    '''
+                }
+            }
         }
-    }
-}
-
 
         /* ================= DEPLOY ================= */
         stage('Deploy') {
@@ -106,6 +94,7 @@ pipeline {
     }
 
     post {
+
         always {
             echo "🧹 Nettoyage Docker final..."
             sh 'docker compose down -v --remove-orphans || true'
@@ -113,10 +102,26 @@ pipeline {
 
         success {
             echo "✅ Pipeline CI/CD réussi"
+            withCredentials([string(credentialsId: 'slack-webhook', variable: 'SLACK_URL')]) {
+                sh '''
+                  curl -X POST \
+                    -H "Content-type: application/json" \
+                    --data '{"text":"✅ Pipeline CI/CD Microservices réussi"}' \
+                    "$SLACK_URL"
+                '''
+            }
         }
 
         failure {
             echo "❌ Pipeline CI/CD échoué"
+            withCredentials([string(credentialsId: 'slack-webhook', variable: 'SLACK_URL')]) {
+                sh '''
+                  curl -X POST \
+                    -H "Content-type: application/json" \
+                    --data '{"text":"❌ Pipeline CI/CD Microservices échoué"}' \
+                    "$SLACK_URL"
+                '''
+            }
         }
     }
 }
