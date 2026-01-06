@@ -30,6 +30,42 @@ pipeline {
             }
         }
 
+        /* ================= TRIVY SECURITY SCAN ================= */
+        stage('Trivy Security Scan') {
+            steps {
+                echo "🔐 Scan de sécurité des images Docker avec Trivy..."
+                sh '''
+                  docker run --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    aquasec/trivy:latest image \
+                    --severity HIGH,CRITICAL \
+                    --no-progress \
+                    pipeline-projet-annuel2-auth-service || true
+
+                  docker run --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    aquasec/trivy:latest image \
+                    --severity HIGH,CRITICAL \
+                    --no-progress \
+                    pipeline-projet-annuel2-product-service || true
+
+                  docker run --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    aquasec/trivy:latest image \
+                    --severity HIGH,CRITICAL \
+                    --no-progress \
+                    pipeline-projet-annuel2-order-service || true
+
+                  docker run --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    aquasec/trivy:latest image \
+                    --severity HIGH,CRITICAL \
+                    --no-progress \
+                    pipeline-projet-annuel2-frontend || true
+                '''
+            }
+        }
+
         /* ================= START STACK (CLEAN + START) ================= */
         stage('Start Services') {
             steps {
