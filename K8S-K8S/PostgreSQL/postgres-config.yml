@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: microservices
+data:
+  PG_PORT: "5432"
+  PG_DB_NAME: "products"
+  PG_SSLMODE: "disable"
+  PG_HOST: "postgres"

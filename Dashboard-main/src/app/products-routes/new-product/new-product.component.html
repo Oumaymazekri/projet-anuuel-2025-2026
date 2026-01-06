@@ -1,0 +1,148 @@
+<div class="mt-5 flex justify-between items-center gap-3 border-b pb-5 px-5">
+  <div>
+    <h2 class="text-3xl font-bold tracking-tight">Create Product</h2>
+    <p class="text-sm text-neutral-500 font-light">Add a new product.</p>
+  </div>
+  <a [routerLink]="['/products']"
+     class="h-9 rounded-md px-3 bg-black text-white flex items-center gap-3 font-medium">
+    <i class="fa-solid fa-list"></i> Products
+  </a>
+</div>
+
+<div class="container px-5 max-w-7xl mx-auto">
+  <form class="mt-5" [formGroup]="productForm" (ngSubmit)="onSubmit()">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+      <!-- Partie gauche -->
+      <div class="space-y-4">
+        <!-- Name -->
+        <div>
+          <label for="name" class="text-lg font-medium">Name</label>
+          <input id="name" type="text" formControlName="name"
+                 class="bg-gray-50 border-2 border-gray-300 rounded-lg block w-full p-3 focus:ring-[#321fdb] focus:border-[#321fdb]" />
+        </div>
+
+        <!-- Category (liste déroulante) -->
+        <div>
+          <label for="category" class="text-lg font-medium">Category</label>
+          <select id="category" formControlName="category"
+                  class="bg-gray-50 border-2 border-gray-300 rounded-lg block w-full p-3 focus:ring-[#321fdb] focus:border-[#321fdb]">
+            <option value="">Select category</option>
+            <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+          </select>
+        </div>
+
+        <!-- Taille (liste déroulante) -->
+        <div>
+          <label for="taille" class="text-lg font-medium">Taille </label>
+          <select id="taille" formControlName="taille"
+                  class="bg-gray-50 border-2 border-gray-300 rounded-lg block w-full p-3 focus:ring-[#321fdb] focus:border-[#321fdb]">
+            <option value="">Select taille</option>
+            <option *ngFor="let t of tailles" [value]="t">{{ t }}</option>
+          </select>
+        </div>
+
+        <!-- Couleur (liste déroulante) -->
+        <div>
+          <label for="couleur" class="text-lg font-medium">Couleur</label>
+          <select id="couleur" formControlName="couleur"
+                  class="bg-gray-50 border-2 border-gray-300 rounded-lg block w-full p-3 focus:ring-[#321fdb] focus:border-[#321fdb]">
+            <option value="">Select couleur</option>
+            <option *ngFor="let color of couleurs" [value]="color">{{ color }}</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Partie droite -->
+      <div class="space-y-4">
+        <!-- Price -->
+        <div>
+          <label for="price" class="text-lg font-medium">Price</label>
+          <input id="price" type="number" step="0.01" formControlName="price"
+                 class="bg-gray-50 border-2 border-gray-300 rounded-lg block w-full p-3 focus:ring-[#321fdb] focus:border-[#321fdb]" />
+        </div>
+
+        <!-- Marque (liste déroulante) -->
+        <div>
+          <label for="marque" class="text-lg font-medium">Marque</label>
+          <select id="marque" formControlName="marque"
+                  class="bg-gray-50 border-2 border-gray-300 rounded-lg block w-full p-3 focus:ring-[#321fdb] focus:border-[#321fdb]">
+            <option value="">Select marque</option>
+            <option *ngFor="let brand of marques" [value]="brand">{{ brand }}</option>
+          </select>
+        </div>
+
+        <!-- Stock -->
+        <div>
+          <label for="stock" class="text-lg font-medium">Stock</label>
+          <input id="stock" type="number" formControlName="stock"
+                 class="bg-gray-50 border-2 border-gray-300 rounded-lg block w-full p-3 focus:ring-[#321fdb] focus:border-[#321fdb]" />
+        </div>
+
+        <!-- Rating -->
+        <div>
+          <label for="rating" class="text-lg font-medium">Rating</label>
+          <input id="rating" type="number" formControlName="rating" min="0" max="5" step="0.1"
+                 class="bg-gray-50 border-2 border-gray-300 rounded-lg block w-full p-3 focus:ring-[#321fdb] focus:border-[#321fdb]" />
+        </div>
+      </div>
+
+      <!-- Champs sur 2 colonnes -->
+      <div class="md:col-span-2 space-y-4">
+        <!-- Description -->
+        <div>
+          <label for="description" class="text-lg font-medium">Description</label>
+          <textarea id="description" formControlName="description"
+                    class="bg-gray-50 border-2 border-gray-300 rounded-lg block w-full p-3 h-24 resize-none focus:ring-[#321fdb] focus:border-[#321fdb]"></textarea>
+        </div>
+
+        <!-- Caractéristique -->
+        <div>
+          <label for="caracteristique" class="text-lg font-medium">Caractéristique</label>
+          <textarea id="caracteristique" formControlName="caracteristique"
+                    class="bg-gray-50 border-2 border-gray-300 rounded-lg block w-full p-3 h-24 resize-none focus:ring-[#321fdb] focus:border-[#321fdb]"></textarea>
+        </div>
+
+        <!-- Upload d'images -->
+        <div>
+          <label class="text-lg font-medium">Images</label>
+          <div (click)="openImagePicker()"
+               class="cursor-pointer w-48 h-48 flex justify-center items-center border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 transition mb-2 relative">
+            <img src="../../assets/download.png" alt="upload" class="w-16 h-16 opacity-60" />
+          </div>
+          <input #imageInput type="file" multiple accept="image/*"
+                 (change)="onImageChange($event)" style="display: none;" />
+          <div class="grid grid-cols-2 gap-3 mt-4" *ngIf="imagePreviews?.length">
+            <div class="relative group" *ngFor="let img of imagePreviews; let i = index">
+              <img [src]="img" class="w-full h-32 object-cover rounded-lg shadow" (click)="openImageModal(img)" />
+              <button type="button"
+                      (click)="removeImage(i)"
+                      class="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm shadow-lg hover:bg-red-700 transition-opacity opacity-80 group-hover:opacity-100">
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <div class="w-full mt-6">
+      <button type="submit"
+              class="h-12 sm:w-[180px] w-full rounded-md px-3 bg-[#321fdb] text-white flex items-center justify-center font-medium">
+        Submit
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Modal d'image agrandie -->
+<div *ngIf="showImageModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center" (click)="closeImageModal()">
+  <div class="relative" (click)="$event.stopPropagation()">
+    <img [src]="selectedImage" alt="Aperçu" class="max-w-full max-h-[90vh] rounded-lg shadow-xl" />
+    <button (click)="closeImageModal()"
+            class="absolute top-2 right-2 bg-white text-black rounded-full p-1 shadow hover:bg-red-500 hover:text-white transition">
+      <i class="fa-solid fa-xmark text-xl"></i>
+    </button>
+  </div>
+</div>

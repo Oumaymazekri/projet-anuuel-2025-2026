@@ -1,0 +1,52 @@
+<div class="px-5">
+  <div class="mt-5 flex justify-between items-center w-full gap-3 border-b pb-5">
+    <div>
+      <h2 class="text-3xl font-bold tracking-tight" *ngIf="result">
+        Customers {{ result.length }}
+      </h2>
+      <p class="text-sm text-neutral-500 font-light">Manage Customers.</p>
+    </div>
+  </div>
+
+  <div class="w-full">
+    <h1 class="mb-5 mt-10 flex justify-between items-center text-4xl font-bold">All Customers</h1>
+
+<ng-container *ngIf="result.length > 0; else elseBlock">
+  <div class="w-full py-4 overflow-y-auto">
+    <table class="w-full">
+      <thead>
+        <tr>
+          <th class="bg-black text-white py-4 px-2 text-center">#ID</th>
+          <th class="bg-black text-white py-4 px-2 text-center">Profile Image</th>
+          <th class="bg-black text-white py-4 px-2 text-center">Full Name</th>
+          <th class="bg-black text-white py-4 px-2 text-center">Email</th>
+          <th class="bg-black text-white py-4 px-2 text-center">Phone Number</th>
+          
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let customer of result!; let i = index" (click)="navigateTo(customer._id,customer)" class="cursor-pointer hover:bg-gray-100">
+          <td class="text-center text-black py-4 border-b border-black">{{ i + 1 }}</td>
+          <td class="text-center py-4 border-b border-black">
+            <img
+            [src]="getImageUrl(customer.image)"
+            alt="profile"
+            class="rounded-full h-[45px] w-[45px] mx-auto"
+            />
+          </td>
+          <td class="text-center text-black py-4 border-b border-black">{{ customer.Full_Name || '-' }}</td>
+          <td class="text-center text-black py-4 border-b border-black">{{ customer.Email }}</td>
+          <td class="text-center text-black py-4 border-b border-black">{{ customer.Phone_Number || '-' }}</td>
+          
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</ng-container>
+
+
+    <ng-template #elseBlock>
+      <h1 class="text-xl font-medium capitalize mt-5">No Customers yet.</h1>
+    </ng-template>
+  </div>
+</div>

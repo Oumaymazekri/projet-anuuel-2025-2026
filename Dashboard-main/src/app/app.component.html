@@ -1,0 +1,9 @@
+<div class="flex dark:bg-main-dark-bg">
+  <!-- Affiche le sidebar et header uniquement si showSidebarHeader est vrai -->
+  <app-sidebar *ngIf="showSidebarHeader"></app-sidebar>
+
+  <div class="flex-1 min-h-[100vh]">
+    <app-header *ngIf="showSidebarHeader"></app-header>
+    <router-outlet></router-outlet>
+  </div>
+</div>

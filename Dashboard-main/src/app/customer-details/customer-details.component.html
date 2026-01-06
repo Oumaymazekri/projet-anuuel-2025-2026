@@ -1,0 +1,78 @@
+<div class="px-5">
+  <div class="mt-5 flex justify-between items-center w-full gap-3 border-b pb-5">
+    <div>
+      <h2 class="text-3xl font-bold tracking-tight">Customer Details</h2>
+      <p class="text-sm text-neutral-500 font-light">
+        Manage [ <span class="text-lg font-normal">{{ costumer.Full_Name || (costumer.firstName + ' ' + costumer.lastName) }}</span> ] details.
+      </p>
+    </div>
+    <a [routerLink]="['/customers']" class="h-9 rounded-md px-3 bg-black
+            text-white flex items-center gap-3 font-medium">
+      <i class="fa-solid fa-backward"></i>
+      Back
+    </a>
+  </div>
+
+  <div class="mt-10">
+    <div class="flex items-center gap-10 justify-start">
+      <div class="flex flex-col items-center justify-center text-center gap-5">
+        <img
+          class="h-[150px] w-[150px] rounded-full object-cover"
+          [src]="getImageUrl(costumer.image)"
+          alt="Profile Image"
+          *ngIf="costumer.image"
+        />
+        <h1 class="text-3xl mt-3 font-bold">
+          {{ costumer.Full_Name || (costumer.firstName + ' ' + costumer.lastName) }}
+        </h1>
+        <p class="text-lg leading-6 max-w-[350px] text-slate-600 font-thin" *ngIf="costumer.bio">
+          {{ costumer.bio }}
+        </p>
+      </div>
+
+      <div class="w-[450px] border-l pl-10 border-black">
+        <ul class="flex flex-col gap-5 mb-10">
+          <li class="flex justify-between gap-5 items-center">
+            <span class="text-xl leading-4 font-bold">Full Name</span>
+            <p class="text-lg leading-3 text-slate-600 font-thin">
+              {{ costumer.Full_Name || (costumer.firstName + ' ' + costumer.lastName) }}
+            </p>
+          </li>
+
+          <li class="flex justify-between gap-5 items-center" *ngIf="costumer.Email || costumer.email">
+            <span class="text-xl leading-4 font-bold">Email</span>
+            <p class="text-lg leading-3 text-slate-600 font-thin">
+              {{ costumer.Email || costumer.email }}
+            </p>
+          </li>
+
+          <li class="flex justify-between gap-5 items-center" *ngIf="costumer.Phone_Number || costumer.phoneNumber">
+            <span class="text-xl leading-4 font-bold">Phone Number</span>
+            <p class="text-lg leading-3 text-slate-600 font-thin">
+              {{ costumer.Phone_Number || costumer.phoneNumber }}
+            </p>
+          </li>
+
+          <li class="flex justify-between gap-5 items-center" *ngIf="costumer.role">
+            <span class="text-xl leading-4 font-bold">Role</span>
+            <p class="text-lg leading-3 text-slate-600 font-thin">
+              {{ costumer.role }}
+            </p>
+          </li>
+
+          <li class="flex justify-between gap-5 items-center" *ngIf="costumer.registrationDate">
+            <span class="text-xl leading-4 font-bold">Register Date</span>
+            <p class="text-lg leading-3 text-slate-600 font-thin">
+              {{ formatReadableDate(costumer.registrationDate) }}
+            </p>
+          </li>
+        </ul>
+
+        <button (click)="delete()"
+                class="bg-red-600 px-4 py-2 font-medium text-white rounded-lg">
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

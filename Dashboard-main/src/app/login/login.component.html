@@ -1,0 +1,112 @@
+<div class="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-md">
+      <div class="p-6">
+        <div class="mb-6">
+          <h2 class="text-3xl font-bold tracking-tight">Login</h2>
+          <p class="text-sm text-neutral-500 font-light">
+            Sign in to access your dashboard and manage your account.
+          </p>
+        </div>
+  
+        <div *ngFor="let item of errorMsg">
+          <div class="text-red-500 text-sm">{{item}}</div>
+        </div>
+  
+        <form (ngSubmit)="handleSubmit()" class="space-y-4 mt-4">
+          <div class="space-y-2">
+            <label for="email" class="block text-sm font-medium">
+              Email
+            </label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <i class="fa-solid fa-envelope text-gray-400"></i>
+              </div>
+              <input
+                id="email"
+                type="email"
+                placeholder="your@email.com"
+                class="w-full pl-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#321fdb]"
+                [(ngModel)]="Email"
+                name="email"
+              />
+            </div>
+          </div>
+  
+          <!-- Password Field -->
+<div class="space-y-2">
+    <div class="flex items-center justify-between">
+      <label for="password" class="block text-sm font-medium">
+        Password
+      </label>
+      <a routerLink="/forgot-password" class="text-sm text-[#321fdb] hover:underline">
+        Forgot password?
+      </a>
+    </div>
+    <div class="relative">
+      <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+        <i class="fa-solid fa-lock text-gray-400"></i>
+      </div>
+      <input
+        id="password"
+        [type]="showPassword ? 'text' : 'password'"
+        placeholder="••••••••"
+        class="w-full pl-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#321fdb]"
+        [(ngModel)]="Password"
+        name="password"
+      />
+      <button
+            type="button"
+            class="absolute inset-y-0 right-0 flex items-center pr-3"
+            (click)="togglePasswordVisibility()"
+            >
+            <i [ngClass]="['fa-solid', showPassword ? 'fa-eye-slash' : 'fa-eye', 'text-gray-400']"></i>
+
+        </button>
+
+    </div>
+  </div>
+  
+  
+          <div class="flex items-center">
+            <input 
+              type="checkbox" 
+              id="remember" 
+              class="h-4 w-4 text-[#321fdb] border-gray-300 rounded"
+              [(ngModel)]="rememberMe"
+              name="rememberMe"
+            />
+            <label for="remember" class="ml-2 block text-sm text-gray-700">
+              Remember me
+            </label>
+          </div>
+  
+          <button 
+            type="submit" 
+            class="w-full bg-[#321fdb] hover:bg-[#2a1bb9] text-white py-2 px-4 rounded-lg font-medium"
+          >
+            Login
+          </button>
+        </form>
+  
+        <div class="mt-6 pt-4 border-t border-gray-200">
+          <button 
+            type="button" 
+            class="w-full border border-gray-300 py-2 px-4 rounded-lg font-medium flex items-center justify-center gap-2"
+            (click)="loginWithGoogle()"
+          >
+            <i class="fa-brands fa-google"></i>
+            Continue with Google
+          </button>
+        </div>
+  
+        <div class="mt-4 text-center text-sm text-neutral-500">
+          Don't have an account?
+          <a routerLink="/register" class="text-[#321fdb] hover:underline ml-1">
+            Register
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  

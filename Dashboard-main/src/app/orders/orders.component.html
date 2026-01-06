@@ -1,0 +1,151 @@
+<div class="px-6 py-8 max-w-full">
+  <!-- Header -->
+  <div class="flex justify-between items-center border-b border-gray-300 pb-4">
+    <div>
+      <h2 class="text-3xl font-extrabold tracking-tight text-gray-900">
+        Orders ({{ orders.length }})
+      </h2>
+      <p class="text-sm text-gray-500 font-light mt-1">Manage your orders</p>
+    </div>
+    <a
+      [routerLink]="['']"
+      class="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-white font-semibold transition hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900"
+    >
+      <i class="fa-solid fa-backward"></i> Back
+    </a>
+  </div>
+
+  <!-- Title -->
+  <h1 class="mt-10 mb-6 text-4xl font-bold text-gray-900">All Orders</h1>
+
+  <!-- Orders Table -->
+  <div *ngIf="orders.length > 0; else noOrders" class="overflow-x-auto bg-white shadow rounded-lg border border-gray-200">
+    <table class="min-w-full table-fixed text-sm text-left text-gray-700 border-collapse">
+      <thead class="bg-gray-100">
+        <tr>
+          <th class="p-3 border-r border-gray-200"></th>
+          <th class="p-3 border-r border-gray-200">#</th>
+          <th class="p-3 border-r border-gray-200">Customer</th>
+          <th class="p-3 border-r border-gray-200">Email</th>
+          <th class="p-3 border-r border-gray-200">Phone</th>
+          <th class="p-3 border-r border-gray-200">Address</th>
+          <th class="p-3 border-r border-gray-200">Delivery</th>
+          <th class="p-3 border-r border-gray-200">Store</th>
+          <th class="p-3 border-r border-gray-200">Delivery Address</th>
+          <th class="p-3 border-r border-gray-200">Payment</th>
+          <th class="p-3 border-r border-gray-200">Status</th>
+          <th class="p-3 border-r border-gray-200 text-right">Total</th>
+          <th class="p-3 text-center">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        <ng-container *ngFor="let order of orders; let i = index">
+          <tr class="hover:bg-gray-50 align-middle">
+            <td class="p-3 text-center border-r border-gray-200">
+              <i
+                (click)="showProductDetails(i)"
+                class="cursor-pointer fa-solid fa-caret-down text-gray-500 hover:text-gray-800"
+              ></i>
+            </td>
+            <td class="p-3 border-r border-gray-200 font-medium">{{ i + 1 }}</td>
+            <td class="p-3 border-r border-gray-200">{{ order.user[0]?.Full_Name }}</td>
+            <td class="p-3 border-r border-gray-200">{{ order.user[0]?.Email }}</td>
+            <td class="p-3 border-r border-gray-200">{{ order.user[0]?.Phone_Number }}</td>
+            <td class="p-3 border-r border-gray-200">{{ order.user[0]?.Adress }}</td>
+            <td class="p-3 border-r border-gray-200 capitalize">{{ order.modeLivraison }}</td>
+            <td class="p-3 border-r border-gray-200">
+              <span *ngIf="order.modeLivraison === 'magasin'">{{ order.nomMagasin }}</span>
+            </td>
+            <td class="p-3 border-r border-gray-200">
+              <div *ngIf="order.modeLivraison === 'domicile'" class="space-y-0.5">
+                <div>{{ order.adresseLivraison?.adresse }}, {{ order.adresseLivraison?.ville }}</div>
+                <div>{{ order.adresseLivraison?.codePostale }}</div>
+                <div class="text-xs text-gray-500">📞 {{ order.adresseLivraison?.telephone }}</div>
+                <div class="text-xs text-gray-500">✉️ {{ order.adresseLivraison?.email }}</div>
+              </div>
+            </td>
+            <td class="p-3 border-r border-gray-200">{{ order.payment?.type }}</td>
+            <td class="p-3 border-r border-gray-200">
+              <select
+                [(ngModel)]="order.etatCommande"
+                (change)="updateOrderStatus(order._id, order.etatCommande)"
+                class="border border-gray-300 rounded px-2 py-1 text-sm focus:ring focus:ring-blue-200"
+              >
+                <option value="en_attente">En attente</option>
+                <option value="Accepté">Acceptée</option>
+                <option value="Refusé">Refusée</option>
+              </select>
+            </td>
+            <td class="p-3 border-r border-gray-200 text-right font-semibold text-gray-900">
+              ${{ order.prixTotal | number: '1.2-2' }}
+            </td>
+            <td class="p-3 text-center">
+              <div class="flex justify-center gap-2">
+                <button
+                  (click)="deleteOrderById(order._id)"
+                  class="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700 transition focus:ring-2 focus:ring-red-400"
+                >
+                  Delete
+                </button>
+                <button
+                  (click)="toggleOrderStatusById(order._id)"
+                  class="px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600 transition focus:ring-2 focus:ring-yellow-400"
+                >
+                  Status
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Modal détails produits -->
+          <tr *ngIf="selectedOrder === order">
+            <td colspan="13" class="bg-gray-50 p-6">
+              <div class="bg-white rounded shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                  Ordered on {{ formatReadableDate(order.DateCreation) }}
+                </h3>
+                <table class="w-full border border-gray-300 divide-y divide-gray-200">
+                  <thead class="bg-gray-200">
+                    <tr>
+                      <th class="p-2 text-left text-sm font-medium text-gray-700">#</th>
+                      <th class="p-2 text-left text-sm font-medium text-gray-700">Product</th>
+                      <th class="p-2 text-left text-sm font-medium text-gray-700">Description</th>
+                      <th class="p-2 text-left text-sm font-medium text-gray-700">Category</th>
+                      <th class="p-2 text-right text-sm font-medium text-gray-700">Price</th>
+                      <th class="p-2 text-right text-sm font-medium text-gray-700">Quantity</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      *ngFor="let product of order.produits; let j = index"
+                      class="border-t border-gray-300"
+                    >
+                      <td class="p-2 text-sm text-gray-700">{{ j + 1 }}</td>
+                      <td class="p-2 text-sm text-gray-900 font-medium">{{ product.Nom }}</td>
+                      <td class="p-2 text-sm text-gray-700">{{ product.description }}</td>
+                      <td class="p-2 text-sm text-gray-700 capitalize">{{ product.category }}</td>
+                      <td class="p-2 text-sm text-right text-gray-900">
+                        ${{ product.prix | number: '1.2-2' }}
+                      </td>
+                      <td class="p-2 text-sm text-right text-gray-700">{{ product.quantite }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <button
+                  (click)="closeProductModal()"
+                  class="mt-5 px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition"
+                >
+                  Close
+                </button>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+
+  <ng-template #noOrders>
+    <div class="mt-12 text-center text-gray-500 text-lg italic">No orders available</div>
+  </ng-template>
+</div>

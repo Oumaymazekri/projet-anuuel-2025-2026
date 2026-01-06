@@ -1,0 +1,94 @@
+<div class="px-5 pb-10">
+  <div *ngFor="let item of errorMsg">
+    {{ item }}
+  </div>
+
+  <div class="mt-5">
+    <h2 class="text-3xl font-bold tracking-tight">Dashboard</h2>
+    <p class="text-sm text-neutral-500 font-light">
+      Welcome to the dashboard and stay up-to-date with the latest information.
+    </p>
+  </div>
+
+  <div class="grid-container mt-8">
+    <a routerLink="/products" class="bg-white px-4 pt-4 rounded-lg w-full shadow">
+      <div class="flex items-center justify-between">
+        <i class="text-[2.5em] font-bold text-[#321fdb] fa-solid fa-fire"></i>
+        <div>
+          <span class="text-[#9a9a9a] font-light text-[16px] leading-6">Products</span>
+          <p class="text-[2em] text-right">{{ product?.length ?? 0 }}</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 text-sm text-neutral-500 border-t py-2">
+        <i class="fa-solid fa-star"></i>
+        New Arrivals
+      </div>
+    </a>
+
+    <a routerLink="" class="bg-white px-4 pt-4 rounded-lg w-full shadow">
+      <div class="flex items-center justify-between">
+        <i class="text-[2.5em] font-bold text-[#e55353] fa-solid fa-clock"></i>
+        <div>
+          <span class="text-[#9a9a9a] font-light text-[16px] leading-6">Incomes</span>
+          <p class="text-[2em] text-right">${{ Totalamount }}</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 text-sm text-neutral-500 border-t py-2">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+        Real-Time Earnings
+      </div>
+    </a>
+
+    <a routerLink="/orders" class="bg-white px-4 pt-4 rounded-lg w-full shadow">
+      <div class="flex items-center justify-between">
+        <i class="text-[2.5em] font-bold text-[#ffe12e] fa-solid fa-basket-shopping"></i>
+        <div>
+          <span class="text-[#9a9a9a] font-light text-[16px] leading-6">Orders</span>
+          <p class="text-[2em] text-right">{{ nbOrders }}</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 text-sm text-neutral-500 border-t py-2">
+        <i class="fa-solid fa-bolt"></i>
+        Recent Orders
+      </div>
+    </a>
+
+    <a routerLink="/customers" class="bg-white px-4 pt-4 rounded-lg w-full shadow">
+      <div class="flex items-center justify-between">
+        <i class="text-[2.5em] font-bold text-[#00d68f] fa-solid fa-users"></i>
+        <div>
+          <span class="text-[#9a9a9a] font-light text-[16px] leading-6">Customers</span>
+          <p class="text-[2em] text-right">{{ Costumers?.length ?? 0 }}</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 text-sm text-neutral-500 border-t py-2">
+        <i class="fa-solid fa-star"></i>
+        Returning Customers
+      </div>
+    </a>
+  </div>
+
+  <div class="mt-5">
+    <h2 class="text-2xl font-bold tracking-tight">Latest Orders</h2>
+    <ul *ngIf="orders && orders.length > 0; else noOrders" class="divide-y divide-gray-200 border border-gray-200 rounded-md mt-3">
+      <li *ngFor="let order of orders.slice(-5).reverse()" class="flex items-center justify-between p-3">
+        <div class="flex items-center space-x-4">
+          <div>
+            <p class="text-sm font-medium text-gray-900">Order ID: {{ order._id }}</p>
+            <p class="text-sm text-gray-500">Date : {{ formatReadableDate(order.DateCreation) }}</p>
+
+          </div>
+        </div>
+        <div class="flex items-center space-x-6 text-sm font-medium">
+          <p class="text-indigo-600 hover:text-indigo-900">
+            {{ order.etatCommande }}
+          </p>
+          <button (click)="deleteOrderById(order._id)" class="text-red-600 hover:text-red-900">Delete</button>
+        </div>
+      </li>
+    </ul>
+    <ng-template #noOrders>
+      <p class="mt-3 text-sm text-gray-500">No orders found.</p>
+    </ng-template>
+  </div>
+</div>

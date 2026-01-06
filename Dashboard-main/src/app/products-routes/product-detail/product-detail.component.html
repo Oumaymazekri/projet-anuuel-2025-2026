@@ -1,0 +1,131 @@
+<div class="container px-5 py-10 max-w-xl" [hidden]="isopen">
+  <form class="mt-5" [formGroup]="productForm" (ngSubmit)="onSubmit()">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+      <!-- Nom -->
+      <div class="form-group mb-3">
+        <label class="text-lg font-medium" for="name">Name</label>
+        <input type="text" id="name" formControlName="name"
+          class="bg-gray-50 border-2 border-gray-300 text-sm rounded-lg focus:ring-[#321fdb] focus:border-[#321fdb] block w-full p-3" />
+      </div>
+
+      <!-- Stock -->
+      <div class="form-group mb-3">
+        <label class="text-lg font-medium" for="stock">Stock</label>
+        <input id="stock" type="number" formControlName="stock"
+          class="bg-gray-50 border-2 border-gray-300 text-sm rounded-lg block w-full p-3 focus:ring-[#321fdb] focus:border-[#321fdb]" />
+      </div>
+
+      <!-- Prix -->
+      <div class="form-group mb-3">
+        <label class="text-lg font-medium" for="price">Price</label>
+        <input type="number" id="price" formControlName="price" step="0.01"
+          class="bg-gray-50 border-2 border-gray-300 text-sm rounded-lg block w-full p-3 focus:ring-[#321fdb] focus:border-[#321fdb]" />
+      </div>
+
+      <!-- Catégorie -->
+      <div class="form-group mb-3">
+        <label class="text-lg font-medium" for="category">Category</label>
+        <select id="category" formControlName="category"
+          class="bg-gray-50 border-2 border-gray-300 text-sm rounded-lg block w-full p-3 focus:ring-[#321fdb] focus:border-[#321fdb]">
+          <option value="">Select category</option>
+          <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+        </select>
+      </div>
+
+      <!-- Taille -->
+      <div class="form-group mb-3">
+        <label class="text-lg font-medium" for="taille">Taille</label>
+        <select id="taille" formControlName="taille"
+          class="bg-gray-50 border-2 border-gray-300 text-sm rounded-lg block w-full p-3 focus:ring-[#321fdb] focus:border-[#321fdb]">
+          <option value="">Select taille</option>
+          <option *ngFor="let t of tailles" [value]="t">{{ t }}</option>
+        </select>
+      </div>
+
+      <!-- Marque -->
+      <div class="form-group mb-3">
+        <label class="text-lg font-medium" for="marque">Marque</label>
+        <select id="marque" formControlName="marque"
+          class="bg-gray-50 border-2 border-gray-300 text-sm rounded-lg block w-full p-3 focus:ring-[#321fdb] focus:border-[#321fdb]">
+          <option value="">Select marque</option>
+          <option *ngFor="let brand of marques" [value]="brand">{{ brand }}</option>
+        </select>
+      </div>
+
+      <!-- Couleur -->
+      <div class="form-group mb-3">
+        <label class="text-lg font-medium" for="couleur">Couleur</label>
+        <select id="couleur" formControlName="couleur"
+          class="bg-gray-50 border-2 border-gray-300 text-sm rounded-lg block w-full p-3 focus:ring-[#321fdb] focus:border-[#321fdb]">
+          <option value="">Select couleur</option>
+          <option *ngFor="let color of couleurs" [value]="color">{{ color }}</option>
+        </select>
+      </div>
+
+      <!-- Rating -->
+      <div class="form-group mb-3">
+        <label class="text-lg font-medium" for="rating">Rating</label>
+        <input type="number" id="rating" formControlName="rating" min="0" max="5"
+          class="bg-gray-50 border-2 border-gray-300 text-sm rounded-lg block w-full p-3 focus:ring-[#321fdb] focus:border-[#321fdb]" />
+      </div>
+
+      <!-- Caractéristique -->
+      <div class="form-group mb-3 col-span-2">
+        <label class="text-lg font-medium" for="caracteristique">Caractéristique</label>
+        <textarea id="caracteristique" formControlName="caracteristique" rows="3"
+          class="bg-gray-50 border-2 border-gray-300 text-sm rounded-lg block w-full p-3 focus:ring-[#321fdb] focus:border-[#321fdb]"></textarea>
+      </div>
+
+      <!-- Description -->
+      <div class="form-group mb-3 col-span-2">
+        <label class="text-lg font-medium" for="description">Description</label>
+        <textarea id="description" formControlName="description" rows="4"
+          class="bg-gray-50 border-2 border-gray-300 text-sm rounded-lg block w-full p-3 focus:ring-[#321fdb] focus:border-[#321fdb]"></textarea>
+      </div>
+
+      <!-- Images multiples -->
+       <div>
+          <label class="text-lg font-medium">Images</label>
+          <div (click)="openImagePicker()"
+               class="cursor-pointer w-48 h-48 flex justify-center items-center border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 transition mb-2 relative">
+            <img src="../../assets/download.png" alt="upload" class="w-16 h-16 opacity-60" />
+          </div>
+          <input #imageInput type="file" multiple accept="image/*"
+                 (change)="onImageChange($event)" style="display: none;" />
+          <div class="grid grid-cols-2 gap-3 mt-4" *ngIf="imagePreviews?.length">
+            <div class="relative group" *ngFor="let img of imagePreviews; let i = index">
+             <img [src]="getImageUrl(img)" class="w-full h-32 object-cover rounded-lg shadow" (click)="openImageModal(img)" />
+
+
+              <button type="button"
+                      (click)="removeImage(i)"
+                      class="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm shadow-lg hover:bg-red-700 transition-opacity opacity-80 group-hover:opacity-100">
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+
+  
+    
+
+      <!-- Bouton Submit -->
+      <div class="w-full col-span-2 mt-5">
+        <button type="submit"
+          class="h-12 w-full sm:w-[180px] rounded-md bg-[#321fdb] text-white flex items-center justify-center font-medium gap-2">
+          Edit
+        </button>
+      </div>
+      <!-- Bouton Delete -->
+      <div class="w-full col-span-2 mt-2">
+        <button type="button"
+                (click)="deleteProduct()"
+                class="h-12 w-full sm:w-[180px] rounded-md bg-red-600 hover:bg-red-700 text-white flex items-center justify-center font-medium gap-2">
+          Supprimer
+        </button>
+      </div>
+
+    </div>
+  </form>
+</div>

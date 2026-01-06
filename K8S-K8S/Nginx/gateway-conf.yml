@@ -1,0 +1,160 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-conf
+data:
+  nginx.conf: |
+    server {
+        listen 80;
+        server_name _;
+
+        # -------- CORS --------
+        set $cors_origin "";
+        if ($http_origin ~* "^http://.*") {
+            set $cors_origin $http_origin;
+        }
+
+        # -------- ERROR JWT --------
+        error_page 401 =403 /auth-denied;
+        location = /auth-denied {
+            default_type application/json;
+            return 403 '{"status":"error","message":"Accès refusé. Token JWT invalide ou absent."}';
+        }
+
+        # -------- AUTH SERVICE --------
+        location /api/auth/ {
+            proxy_pass http://auth-service:3000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header Authorization $http_authorization;
+
+            # CORS
+            if ($request_method = OPTIONS) {
+                add_header 'Access-Control-Allow-Origin' '*' always;
+                add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+                add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorization' always;
+                return 204;
+            }
+
+            add_header 'Access-Control-Allow-Origin' '*' always;
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+            add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorization' always;
+        }
+
+        # -------- JWT VALIDATION --------
+        location = /api/auth/validate {
+            internal;
+            proxy_pass http://auth-service:3000/api/auth/validate;
+            proxy_pass_request_body off;
+            proxy_set_header Content-Length "";
+            proxy_set_header X-Original-URI $request_uri;
+            proxy_set_header Authorization $http_authorization;
+            auth_request_set $auth_user $upstream_http_x_auth_user;
+            auth_request_set $auth_role $upstream_http_x_auth_role;
+        }
+
+        # -------- PRODUCT SERVICE --------
+        # Public routes
+        location /products/ {
+            proxy_pass http://product-service:3001;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+
+            if ($request_method = OPTIONS) {
+                add_header 'Access-Control-Allow-Origin' '*' always;
+                add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+                add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorization' always;
+                return 204;
+            }
+
+            add_header 'Access-Control-Allow-Origin' '*' always;
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+            add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorization' always;
+        }
+
+        # Protected routes
+        location /products/AddProduct {
+            auth_request /api/auth/validate;
+            auth_request_set $auth_user $upstream_http_x_auth_user;
+            auth_request_set $auth_role $upstream_http_x_auth_role;
+
+            proxy_pass http://product-service:3001/products/AddProduct;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header Authorization $http_authorization;
+            proxy_set_header X-Auth-User $upstream_http_x_auth_user;
+            proxy_set_header X-Auth-Role $upstream_http_x_auth_role;
+
+            error_page 401 =403 /auth-denied;
+        }
+
+        location ~ ^/products/(Update|Delete)Product/([a-zA-Z0-9\-]+)$ {
+            auth_request /api/auth/validate;
+            auth_request_set $auth_user $upstream_http_x_auth_user;
+            auth_request_set $auth_role $upstream_http_x_auth_role;
+
+            proxy_pass http://product-service:3001;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header Authorization $http_authorization;
+            proxy_set_header X-Auth-User $upstream_http_x_auth_user;
+            proxy_set_header X-Auth-Role $upstream_http_x_auth_role;
+
+            error_page 401 =403 /auth-denied;
+        }
+
+        # -------- ORDER SERVICE --------
+        location /api/order/ {
+            auth_request /api/auth/validate;
+            auth_request_set $auth_user $upstream_http_x_auth_user;
+            auth_request_set $auth_role $upstream_http_x_auth_role;
+
+            proxy_pass http://order-service:3002;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header Authorization $http_authorization;
+            proxy_set_header X-Auth-User $upstream_http_x_auth_user;
+            proxy_set_header X-Auth-Role $upstream_http_x_auth_role;
+
+            if ($request_method = OPTIONS) {
+                add_header 'Access-Control-Allow-Origin' "$cors_origin" always;
+                add_header 'Access-Control-Allow-Credentials' 'true' always;
+                add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS, PATCH' always;
+                add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type, X-Auth-User, X-Auth-Role' always;
+                add_header 'Access-Control-Max-Age' 1728000 always;
+                add_header 'Content-Type' 'text/plain charset=UTF-8' always;
+                add_header 'Content-Length' 0 always;
+                return 204;
+            }
+
+            add_header 'Access-Control-Allow-Origin' "$cors_origin" always;
+            add_header 'Access-Control-Allow-Credentials' 'true' always;
+
+            client_max_body_size 10M;
+        }
+
+        # -------- IMAGES --------
+        location /images/ {
+            proxy_pass http://product-service:3001/images/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location /images/users/ {
+            proxy_pass http://auth-service:3000/images/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        # -------- FRONT REACT --------
+        location / {
+            proxy_pass http://front-service;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_cache_bypass $http_upgrade;
+        }
+    }
