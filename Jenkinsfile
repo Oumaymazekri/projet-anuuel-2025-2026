@@ -75,20 +75,21 @@ pipeline {
 
 
         /* ================= SONARQUBE ================= */
-        stage('SonarQube Analysis') {
-            steps {
-                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-                    sh '''
-                      sonar-scanner \
-                      -Dsonar.projectKey=$SONAR_PROJECT_KEY \
-                      -Dsonar.host.url=$SONAR_HOST_URL \
-                      -Dsonar.login=$SONAR_TOKEN \
-                      -Dsonar.sources=Front-main,auth-service-main,order-service-main,product-service-main \
-                      -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**,**/vendor/**
-                    '''
-                }
-            }
+       stage('SonarQube Analysis') {
+    steps {
+        withSonarQubeEnv('SonarQube') {
+            sh '''
+              export PATH=$PATH:$(tool 'SonarScanner')/bin
+
+              sonar-scanner \
+              -Dsonar.projectKey=microservices-project \
+              -Dsonar.sources=Front-main,auth-service-main,order-service-main,product-service-main \
+              -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**,**/vendor/**
+            '''
         }
+    }
+}
+
 
         /* ================= DEPLOY ================= */
         stage('Deploy') {
