@@ -75,20 +75,25 @@ pipeline {
 
 
         /* ================= SONARQUBE ================= */
-       stage('SonarQube Analysis') {
+      stage('SonarQube Analysis') {
     steps {
-        withSonarQubeEnv('SonarQube') {
-            sh '''
-              export PATH=$PATH:$(tool 'SonarScanner')/bin
+        script {
+            // Récupération du chemin du scanner via Jenkins
+            def scannerHome = tool 'SonarScanner'
 
-              sonar-scanner \
-              -Dsonar.projectKey=microservices-project \
-              -Dsonar.sources=Front-main,auth-service-main,order-service-main,product-service-main \
-              -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**,**/vendor/**
-            '''
+            withSonarQubeEnv('SonarQube') {
+                sh """
+                  export PATH=\$PATH:${scannerHome}/bin
+                  sonar-scanner \
+                    -Dsonar.projectKey=microservices-project \
+                    -Dsonar.sources=Front-main,auth-service-main,order-service-main,product-service-main \
+                    -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**,**/vendor/**
+                """
+            }
         }
     }
 }
+
 
 
         /* ================= DEPLOY ================= */
