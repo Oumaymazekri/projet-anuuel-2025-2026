@@ -2,14 +2,11 @@ pipeline {
     agent any
 
     environment {
-        // Docker
         DOCKER_BUILDKIT = '1'
 
-        // SonarQube (sans token ici)
         SONAR_PROJECT_KEY = 'microservices-project'
         SONAR_HOST_URL = 'http://localhost:9000'
 
-        // Docker Compose
         COMPOSE_FILE = 'docker-compose.yml'
     }
 
@@ -33,8 +30,18 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 echo "🐳 Build des images Docker..."
+                sh 'docker compose build'
+            }
+        }
+
+        /* ================= START STACK ================= */
+        stage('Start Services') {
+            steps {
+                echo "🚀 Démarrage des services..."
                 sh '''
-                  docker compose build
+                  docker compose up -d
+                  echo "⏳ Attente des services..."
+                  sleep 40
                 '''
             }
         }
@@ -42,20 +49,19 @@ pipeline {
         /* ================= INTEGRATION TESTS ================= */
         stage('Integration Tests') {
             steps {
-                echo "🧪 Tests d’intégration via Docker Compose..."
+                echo "🧪 Tests d’intégration..."
                 sh '''
-                  docker compose up -d
-                  echo "⏳ Attente du démarrage des services..."
-                  sleep 30
+                  set -e
 
-                  echo "📦 Conteneurs actifs"
-                  docker ps
+                  for i in {1..10}; do
+                    curl -f http://localhost && break
+                    echo "⏳ Nginx pas encore prêt..."
+                    sleep 5
+                  done
 
-                  echo "🔍 Health checks"
-                  curl -f http://localhost || exit 1
-                  curl -f http://localhost/auth || exit 1
-                  curl -f http://localhost/products || exit 1
-                  curl -f http://localhost/orders || exit 1
+                  curl -f http://localhost/auth
+                  curl -f http://localhost/products
+                  curl -f http://localhost/orders
                 '''
             }
         }
@@ -65,11 +71,12 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                     sh '''
-                      npx sonar-scanner \
+                      sonar-scanner \
                       -Dsonar.projectKey=$SONAR_PROJECT_KEY \
-                      -Dsonar.sources=. \
                       -Dsonar.host.url=$SONAR_HOST_URL \
-                      -Dsonar.login=$SONAR_TOKEN
+                      -Dsonar.login=$SONAR_TOKEN \
+                      -Dsonar.sources=Front-main,auth-service-main,order-service-main,product-service-main \
+                      -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**,**/vendor/**
                     '''
                 }
             }
