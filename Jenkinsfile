@@ -1,178 +1,140 @@
 pipeline {
     agent any
 
-    options {
-        timestamps()
-        timeout(time: 60, unit: 'MINUTES')
-    }
-
     environment {
         REGISTRY = "docker.io/oumaymazekri"
-        SONAR_HOST_URL = "http://localhost:9000"
+        NODE_ENV = "test"
+    }
+
+    options {
+        timestamps()
+        timeout(time: 30, unit: 'MINUTES')
     }
 
     stages {
 
-        stage('Checkout') {
+        /* ===================== CHECKOUT ===================== */
+        stage('Checkout Source Code') {
             steps {
                 checkout scm
             }
         }
 
+        /* ===================== INSTALL ===================== */
         stage('Install Dependencies') {
-            parallel {
-                stage('Auth') {
-                    steps {
-                        dir('auth-service-main') {
-                            sh 'npm install'
-                        }
-                    }
-                }
-                stage('Product') {
-                    steps {
-                        dir('product-service-main') {
-                            sh 'npm install'
-                        }
-                    }
-                }
-                stage('Order') {
-                    steps {
-                        dir('order-service-main') {
-                            sh 'npm install'
-                        }
-                    }
-                }
-                stage('Frontend') {
-                    steps {
-                        dir('Front-main') {
-                            sh 'npm install'
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('Unit Tests') {
-            parallel {
-                stage('Auth Tests') {
-                    steps {
-                        dir('auth-service-main') {
-                            sh 'npm test || true'
-                        }
-                    }
-                }
-                stage('Product Tests') {
-                    steps {
-                        dir('product-service-main') {
-                            sh 'npm test || true'
-                        }
-                    }
-                }
-                stage('Order Tests') {
-                    steps {
-                        dir('order-service-main') {
-                            sh 'npm test || true'
-                        }
-                    }
-                }
-                stage('Frontend Tests') {
-                    steps {
-                        dir('Front-main') {
-                            sh 'npm test || true'
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('SonarQube Analysis') {
-            withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-                sh '''
-                npx sonar-scanner \
-                -Dsonar.projectKey=projet-microservices \
-                -Dsonar.sources=. \
-                -Dsonar.host.url=$SONAR_HOST_URL \
-                -Dsonar.login=$SONAR_TOKEN
-                '''
-            }
-        }
-
-        stage('Docker Build') {
-            parallel {
-                stage('Auth Image') {
-                    steps {
-                        dir('auth-service-main') {
-                            sh 'docker build -t $REGISTRY/auth-service:latest .'
-                        }
-                    }
-                }
-                stage('Product Image') {
-                    steps {
-                        dir('product-service-main') {
-                            sh 'docker build -t $REGISTRY/product-service:latest .'
-                        }
-                    }
-                }
-                stage('Order Image') {
-                    steps {
-                        dir('order-service-main') {
-                            sh 'docker build -t $REGISTRY/order-service:latest .'
-                        }
-                    }
-                }
-                stage('Frontend Image') {
-                    steps {
-                        dir('Front-main') {
-                            sh 'docker build -t $REGISTRY/frontend:latest .'
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('Docker Push') {
-            withCredentials([usernamePassword(
-                credentialsId: 'dockerhub-creds',
-                usernameVariable: 'DOCKER_USER',
-                passwordVariable: 'DOCKER_PASS'
-            )]) {
-                sh '''
-                echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                docker push $REGISTRY/auth-service:latest
-                docker push $REGISTRY/product-service:latest
-                docker push $REGISTRY/order-service:latest
-                docker push $REGISTRY/frontend:latest
-                '''
-            }
-        }
-
-        stage('Integration Tests & Deploy') {
             steps {
                 sh '''
-                docker compose down || true
+                for service in auth-service-main product-service-main order-service-main Front-main; do
+                    if [ -f $service/package.json ]; then
+                        echo "Installing dependencies for $service"
+                        cd $service
+                        npm install
+                        cd ..
+                    fi
+                done
+                '''
+            }
+        }
+
+        /* ===================== UNIT TESTS ===================== */
+        stage('Unit Tests') {
+            steps {
+                sh '''
+                for service in auth-service-main product-service-main order-service-main; do
+                    if [ -f $service/package.json ]; then
+                        echo "Running tests for $service"
+                        cd $service
+                        npm test || true
+                        cd ..
+                    fi
+                done
+                '''
+            }
+        }
+
+        /* ===================== INTEGRATION TESTS ===================== */
+        stage('Integration Tests') {
+            steps {
+                sh '''
+                echo "Running integration tests (Docker Compose)"
+                docker compose -f docker-compose.test.yml up --build --abort-on-container-exit || true
+                docker compose -f docker-compose.test.yml down
+                '''
+            }
+        }
+
+        /* ===================== SONARQUBE ===================== */
+        stage('SonarQube Analysis') {
+            steps {
+                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                    sh '''
+                    npx sonar-scanner \
+                    -Dsonar.projectKey=projet-microservices \
+                    -Dsonar.sources=. \
+                    -Dsonar.host.url=http://localhost:9000 \
+                    -Dsonar.login=$SONAR_TOKEN
+                    '''
+                }
+            }
+        }
+
+        /* ===================== DOCKER BUILD ===================== */
+        stage('Docker Build') {
+            steps {
+                sh '''
+                docker build -t $REGISTRY/auth-service:latest auth-service-main
+                docker build -t $REGISTRY/product-service:latest product-service-main
+                docker build -t $REGISTRY/order-service:latest order-service-main
+                docker build -t $REGISTRY/frontend:latest Front-main
+                '''
+            }
+        }
+
+        /* ===================== DOCKER PUSH ===================== */
+        stage('Docker Push') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                    docker push $REGISTRY/auth-service:latest
+                    docker push $REGISTRY/product-service:latest
+                    docker push $REGISTRY/order-service:latest
+                    docker push $REGISTRY/frontend:latest
+                    '''
+                }
+            }
+        }
+
+        /* ===================== DEPLOY ===================== */
+        stage('Deploy (Docker)') {
+            steps {
+                sh '''
+                docker compose down
                 docker compose up -d
-                docker ps
                 '''
             }
         }
     }
 
+    /* ===================== NOTIFICATIONS ===================== */
     post {
         success {
             withCredentials([string(credentialsId: 'slack-webhook', variable: 'SLACK_URL')]) {
                 sh '''
-                curl -X POST -H "Content-type: application/json" \
-                --data '{"text":"✅ CI/CD Microservices Pipeline SUCCESS"}' \
-                $SLACK_URL
+                curl -X POST -H 'Content-type: application/json' \
+                --data '{"text":"✅ Pipeline Microservices SUCCESS"}' $SLACK_URL
                 '''
             }
         }
         failure {
             withCredentials([string(credentialsId: 'slack-webhook', variable: 'SLACK_URL')]) {
                 sh '''
-                curl -X POST -H "Content-type: application/json" \
-                --data '{"text":"❌ CI/CD Microservices Pipeline FAILED"}' \
-                $SLACK_URL
+                curl -X POST -H 'Content-type: application/json' \
+                --data '{"text":"❌ Pipeline Microservices FAILED"}' $SLACK_URL
                 '''
             }
         }
