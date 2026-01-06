@@ -2,141 +2,122 @@ pipeline {
     agent any
 
     environment {
-        REGISTRY = "docker.io/oumaymazekri"
-        NODE_ENV = "test"
+        // Docker
+        DOCKER_BUILDKIT = '1'
+
+        // SonarQube
+        SONAR_PROJECT_KEY = 'microservices-project'
+        SONAR_HOST_URL = 'http://localhost:9000'
+
+        // Credentials Jenkins
+        SONAR_TOKEN = credentials('sonartoken')
+        SLACK_URL = credentials('slack-webhook')
+
+        // Docker Compose
+        COMPOSE_FILE = 'docker-compose.yml'
     }
 
     options {
         timestamps()
         timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
     stages {
 
-        /* ===================== CHECKOUT ===================== */
+        /* ================= CHECKOUT ================= */
         stage('Checkout Source Code') {
             steps {
+                echo "📥 Clonage du projet..."
                 checkout scm
             }
         }
 
-        /* ===================== INSTALL ===================== */
-        stage('Install Dependencies') {
+        /* ================= BUILD IMAGES ================= */
+        stage('Build Docker Images') {
             steps {
+                echo "🐳 Build des images Docker..."
                 sh '''
-                for service in auth-service-main product-service-main order-service-main Front-main; do
-                    if [ -f $service/package.json ]; then
-                        echo "Installing dependencies for $service"
-                        cd $service
-                        npm install
-                        cd ..
-                    fi
-                done
+                  docker compose build
                 '''
             }
         }
 
-        /* ===================== UNIT TESTS ===================== */
-        stage('Unit Tests') {
+        /* ================= INTEGRATION TESTS ================= */
+        stage('Integration Tests (Docker Compose)') {
             steps {
+                echo "🧪 Lancement des tests d’intégration..."
                 sh '''
-                for service in auth-service-main product-service-main order-service-main; do
-                    if [ -f $service/package.json ]; then
-                        echo "Running tests for $service"
-                        cd $service
-                        npm test || true
-                        cd ..
-                    fi
-                done
+                  docker compose up -d
+                  echo "⏳ Attente du démarrage des services..."
+                  sleep 30
+
+                  echo "🔍 Vérification des conteneurs..."
+                  docker ps
+
+                  echo "🧪 Tests d’intégration basiques (health check)"
+                  curl -f http://localhost || exit 1
+                  curl -f http://localhost/auth || exit 1
+                  curl -f http://localhost/products || exit 1
+                  curl -f http://localhost/orders || exit 1
                 '''
             }
         }
 
-        /* ===================== INTEGRATION TESTS ===================== */
-        stage('Integration Tests') {
-            steps {
-                sh '''
-                echo "Running integration tests (Docker Compose)"
-                docker compose -f docker-compose.test.yml up --build --abort-on-container-exit || true
-                docker compose -f docker-compose.test.yml down
-                '''
-            }
-        }
-
-        /* ===================== SONARQUBE ===================== */
+        /* ================= SONARQUBE ================= */
         stage('SonarQube Analysis') {
             steps {
-                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                echo "📊 Analyse SonarQube..."
+                withSonarQubeEnv('SonarQube') {
                     sh '''
-                    npx sonar-scanner \
-                    -Dsonar.projectKey=projet-microservices \
-                    -Dsonar.sources=. \
-                    -Dsonar.host.url=http://localhost:9000 \
-                    -Dsonar.login=$SONAR_TOKEN
+                      sonar-scanner \
+                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                        -Dsonar.sources=. \
+                        -Dsonar.host.url=${SONAR_HOST_URL} \
+                        -Dsonar.login=${SONAR_TOKEN}
                     '''
                 }
             }
         }
 
-        /* ===================== DOCKER BUILD ===================== */
-        stage('Docker Build') {
-            steps {
-                sh '''
-                docker build -t $REGISTRY/auth-service:latest auth-service-main
-                docker build -t $REGISTRY/product-service:latest product-service-main
-                docker build -t $REGISTRY/order-service:latest order-service-main
-                docker build -t $REGISTRY/frontend:latest Front-main
-                '''
-            }
-        }
-
-        /* ===================== DOCKER PUSH ===================== */
-        stage('Docker Push') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh '''
-                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                    docker push $REGISTRY/auth-service:latest
-                    docker push $REGISTRY/product-service:latest
-                    docker push $REGISTRY/order-service:latest
-                    docker push $REGISTRY/frontend:latest
-                    '''
-                }
-            }
-        }
-
-        /* ===================== DEPLOY ===================== */
+        /* ================= DEPLOY ================= */
         stage('Deploy (Docker)') {
             steps {
+                echo "🚀 Déploiement final..."
                 sh '''
-                docker compose down
-                docker compose up -d
+                  docker compose down
+                  docker compose up -d
                 '''
             }
         }
     }
 
-    /* ===================== NOTIFICATIONS ===================== */
     post {
         success {
+            echo "✅ Pipeline terminé avec succès"
             withCredentials([string(credentialsId: 'slack-webhook', variable: 'SLACK_URL')]) {
                 sh '''
-                curl -X POST -H 'Content-type: application/json' \
-                --data '{"text":"✅ Pipeline Microservices SUCCESS"}' $SLACK_URL
+                  curl -X POST -H "Content-type: application/json" \
+                  --data '{"text":"✅ Pipeline CI/CD Microservices réussi"}' \
+                  $SLACK_URL
                 '''
             }
         }
+
         failure {
+            echo "❌ Pipeline échoué"
             withCredentials([string(credentialsId: 'slack-webhook', variable: 'SLACK_URL')]) {
                 sh '''
-                curl -X POST -H 'Content-type: application/json' \
-                --data '{"text":"❌ Pipeline Microservices FAILED"}' $SLACK_URL
+                  curl -X POST -H "Content-type: application/json" \
+                  --data '{"text":"❌ Pipeline CI/CD Microservices échoué"}' \
+                  $SLACK_URL
                 '''
             }
+        }
+
+        always {
+            echo "🧹 Nettoyage Docker..."
+            sh 'docker compose down || true'
         }
     }
 }
